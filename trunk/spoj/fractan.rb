@@ -2,6 +2,8 @@
 #
 #
 
+
+
 # Find primes up to limit using the classical sieve algorithm.
 def primes_erat1(limit)
   bound = Math.sqrt(limit).ceil
@@ -85,9 +87,9 @@ def solve_line(s)
   return null if m == 0
   f = nums.each_slice(2).collect{ |x| Rational(x[0], x[1]) }
   # nums.reduce(:gcd) == 1
-  r = solve(m, n, f)
+  #r = solve(m, n, f)
 
-  r
+  puts "#{n}, #{f}"
 end
 
 #main
