@@ -1,0 +1,4 @@
+task :clean do
+    delete *.obj
+    delete *.exe
+    delete *.~
