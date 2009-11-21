@@ -1,112 +1,98 @@
 # https://www.spoj.pl/problems/FRACTAN/
 #
-#
+# Correct but too slow
 
-
-
-# Find primes up to limit using the classical sieve algorithm.
-def primes_erat1(limit)
+def sieve(limit)
   bound = Math.sqrt(limit).ceil
-  primes = (2..limit).collect { |n| n }
-  good = []
+  sieve = (0..limit+1).collect{ true }
   p = 2
-  while !p.nil? && p < bound
-    good << p
-    primes = primes.select { |n| !(n%p).zero?}
-    p = primes.first
-  end
-  good + primes
-end
-
-def primes_erat2(limit, sieve = (0..limit).collect{ true })
-  bound = Math.sqrt(limit).ceil
-  p = 2
-  while !p.nil? && p < bound
+  while !p.nil? && p <= bound
     q = p*p
     while q <= limit
       sieve[q] = false
-      q = q+p
+      q = q + p
     end
-    p = (p+1..limit).find{ |n| sieve[n] }
+    p =(p+1 .. limit).find{ |n| sieve[n] }
   end
-  (2..limit).select { |n| sieve[n]}
+  (2..limit).select{ |n| sieve[n]}
 end
 
-def primes_sundaram(limit)
-  sieve = (0..limit+1).collect{ true }
-#  sieve[0] = false
-  # remove all numbers n with: n = i+j +2ij, (n-i)/(1+2i) > j
-  # can be found by n >= i + j + 2ij
-  d = 2
-  loop do
-    b = false
-    (1..d-1).each { |i|
-      j = d - i
-      next if j < i
-      n = i + j + 2*i*j
-     # puts "check #{i}, #{j} => #{n}"
-      if n <= limit
-        sieve[n] = false
-        b = true
-      end
-    }
-    d = d+1
-    break if !b
-  end
-  primes = (2..limit).select { |n| sieve[n] }
-  #puts "#{primes}"
-  primes = primes.collect{ |n| 1+2*n }.unshift 2
-  primes.select { |p| p <= limit }
+Primes = sieve(100)
 
-end
-
-def wheel(limit, seed)
-  n = seed.reduce(:*)
-  c = (1..n).collect{ |i| [i] }.unshift []
-  x = 1
-  while c.last.last < limit
-    (1..n).each{ |i| c[i] << x*n+i }
-    x = x+1
-  end
-  c[1].shift
-  seed.each { |p|
-    c[p] = [p]
-    (2..n/p).each{ |i| c[i*p] = [] }
+def factorize(number, primes = Primes)
+  f = []
+  primes.each_with_index{ |p, i|
+    while (number % p).zero?
+      number = number / p
+      f << i
+    end
   }
-  sieve = (0..limit).collect { false }
-  c.flatten.each{ |n| sieve[n] = true }
-  sieve
+  f
+end
+
+def exponents(number, primes = Primes)
+  exp = primes.length.times.collect { 0 }
+  factorize(number).each{ |i| exp[i] = exp[i] + 1}
+  exp
 end
 
 
-def solve_line(s)
+# Parse a line with a problem
+def parse(s)
   nums = s.split.collect{ |x| x.to_i}
   m = nums.shift
-  n = nums.shift
+  #puts ">#{m} #{m.class}"
+  return 0 if m.zero?
+  n = exponents(nums.shift)
   k = nums.shift
-  return null if m == 0
-  f = nums.each_slice(2).collect{ |x| Rational(x[0], x[1]) }
-  # nums.reduce(:gcd) == 1
-  #r = solve(m, n, f)
-
-  puts "#{n}, #{f}"
+  f = nums.each_slice(2).collect{ |x| x.collect{ |y| factorize(y) } }
+  [m, n, f]
 end
 
-#main
+def pow2?(f)
+  f[1..-1].all?{ |x| x.zero? }
+end
+
+# multiple a with fraction, return nil if result not integer
+def fracmul(a, frac)
+  c = a.dup
+  frac[1].each { |i|
+    return nil if c[i] == 0
+    c[i] = c[i] - 1
+  }
+  frac[0].each { |i| c[i] = c[i] + 1}
+  c
+end
+
+def solve(m, n, f)
+  r = []
+  while m.nonzero?
+
+    if pow2?(n)
+      #puts "#{n}"
+      r << n[0]
+      m = m - 1
+    end
+    if m.nonzero?
+      z = nil
+      y = f.find { |f| z = fracmul(n, f) }
+      n = z
+    end
+  end
+  r
+end
+
+def main
+  loop do
+    m, n ,f = parse(gets)
+    break if m.zero?
+    r = solve(m, n, f)
+    puts "#{r}"
+  end
+end
+
+main
+S0 = "3 4 32 5"
 S1 = "1 21 8 170 39 19 13 13 17 69 95 19 23 1 19 13 7 1 3"
 S2 = "20 2 14 17 91 78 85 19 51 23 38 29 33 77 29 95 23 77 19 1 17 11 13 13 11 15 2 1 7 55 1"
 
-def measure(msg="")
-  a = Time.now
-  yield
-  puts "#{msg}: #{Time.now - a}"
-end
-
-def benchmark(n)
-  measure("erat1") { primes_erat1(n) }
-  measure("erat2") { primes_erat2(n) }
-  measure("erat3") { primes_erat2(n, wheel(n, [2,3]))}
-  measure("erat4") { primes_erat2(n, wheel(n, [2,3,5]))}
-  measure("erat5") { primes_erat2(n, wheel(n, [2,3,5,7]))}
-  measure("sundaram") { primes_sundaram(n)}
-end
